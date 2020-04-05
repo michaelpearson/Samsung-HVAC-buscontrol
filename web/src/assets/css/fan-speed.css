@@ -1,0 +1,36 @@
+.fan > p {
+    font-size: 20px;
+    text-align: center;
+    font-weight: lighter;
+}
+
+.fan > .speed-selector {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.fan-speed-icon {
+    flex: 1;
+    width: 50px;
+    height: auto;
+    fill: #313169;
+    padding: 1%;
+    margin: 1%;
+}
+
+.fan-speed-icon:nth-child(1) #hollow, .fan-speed-icon:nth-child(1) #filled {
+    visibility: hidden !important;
+}
+
+.fan-speed-icon #hollow {
+    visibility: visible;
+}
+
+.fan-speed-icon.selected #filled {
+    visibility: visible;
+}
+
+.fan-speed-icon.selected {
+    fill: #619ef5;
+}

@@ -1,0 +1,27 @@
+html {
+    height: 100%;
+    touch-action: none;
+    background-color: #0b0f27;
+    color: #9a9a9a;
+    font-family: Tahoma, Geneva, sans-serif;
+    font-weight: lighter;
+}
+
+body {
+    margin: auto;
+    max-width: 500px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.content {
+    box-shadow: black 0 0 10px 0;
+}
+
+.content > div {
+    width: 100%;
+    padding: 20px;
+}
+

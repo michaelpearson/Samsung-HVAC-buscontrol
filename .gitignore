@@ -1,0 +1,8 @@
+.pio
+CMakeListsPrivate.txt
+.idea/
+cmake-*
+web/node_modules
+*.map
+data/*
+.DS_STORE

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AC Control</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        <% include src/assets/css/main.css %>
+        <% include src/assets/css/temperature.css %>
+        <% include src/assets/css/fan-speed.css %>
+        <% include src/assets/css/power.css %>
+        <% include src/assets/css/mode.css %>
+    </style>
+</head>
+<body>
+<div class="content">
+    <div class="mode">
+        <div class="mode-option mode-automatic" data-mode="auto">
+            <% include src/assets/svg/mode_automatic.svg %>
+            <p>Auto</p>
+        </div>
+        <div class="mode-option mode-cool" data-mode="cool">
+            <% include src/assets/svg/mode_cold.svg %>
+            <p>Cold</p>
+        </div>
+        <div class="mode-option mode-dry" data-mode="dry">
+            <% include src/assets/svg/mode_dry.svg %>
+            <p>Dry</p>
+        </div>
+        <div class="mode-option mode-fan" data-mode="fan">
+            <% include src/assets/svg/mode_fan.svg %>
+            <p>Fan</p>
+        </div>
+        <div class="mode-option mode-heat" data-mode="heat">
+            <% include src/assets/svg/mode_heat.svg %>
+            <p>Heat</p>
+        </div>
+    </div>
+    <div class="power">
+        <div class="power-options">
+            <div class="power-option power-off" data-power="off">Off</div>
+            <div class="power-option power-automatic" data-power="auto">Auto</div>
+            <div class="power-option power-low" data-power="low">Low</div>
+            <div class="power-option power-medium" data-power="medium">Medium</div>
+            <div class="power-option power-high" data-power="high">High</div>
+        </div>
+    </div>
+    <div class="temperature">
+        <canvas id="dial" width="500" height="500"></canvas>
+    </div>
+</div>
+</body>
+</html>
