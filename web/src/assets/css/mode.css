@@ -1,0 +1,36 @@
+.mode {
+    display: flex;
+    justify-content: space-evenly;
+    overflow-x: auto;
+}
+
+.mode-option {
+    border: 2px solid #313169;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    height: auto;
+    fill: #313169;
+    color: #313169;
+
+    min-width: 50px;
+    max-width: 128px;
+}
+
+.mode-option > svg {
+    padding: 5px;
+    width: 100%;
+    height: auto;
+}
+
+.mode-option.selected {
+    fill: #619ef5;
+    color: #619ef5;
+    border-color: #619ef5;
+}
+
+.mode-option > p {
+    margin: 0;
+    font-size: 13px;
+    text-align: center;
+}

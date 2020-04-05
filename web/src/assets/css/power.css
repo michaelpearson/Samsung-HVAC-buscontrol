@@ -1,0 +1,25 @@
+.power {
+    text-align: center;
+}
+
+.power-options {
+    display: inline-block;
+    border: solid #313169 2px;
+    font-size: 14px;
+    line-height: 30px;
+    border-radius: 30px;
+    color: #313169;
+}
+
+.power-option {
+    margin: -2px;
+    border: 2px solid transparent;
+    padding: 0 10px 0 10px;
+    display: inline-block;
+}
+
+.power-option.selected {
+    border: 2px solid #619ef5;
+    color: #619ef5;
+    border-radius: 30px;
+}

@@ -1,0 +1,14 @@
+.content > .temperature {
+    background: linear-gradient(180deg, #0b0f27, #121830);
+    overflow: hidden;
+    padding-bottom: 0;
+}
+
+.temperature > .panel {
+    height: 100px;
+}
+
+.temperature > canvas {
+    width: 100%;
+    margin-bottom: -35%;
+}
