@@ -2,6 +2,7 @@
 #include <ArduinoOTA.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
+#include "AuthenticatedAsyncWebSocket.h"
 
 #define TX_EN_PIN 14
 
@@ -35,6 +36,7 @@ typedef struct State {
 void setup();
 void loop();
 
+bool auth(AsyncWebServerRequest * request);
 char calculate_checksum(char message[13]);
 void send_state(AsyncWebSocketClient * client = nullptr);
 void handleSetApi(AsyncWebServerRequest * request);

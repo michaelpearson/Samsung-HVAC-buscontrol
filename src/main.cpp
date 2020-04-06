@@ -1,11 +1,15 @@
 #include "main.h"
 
 AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
+AuthenticatedAsyncWebSocket ws(auth, "/ws");
 
 u8 send_flag = 0;
 State desired_state;
 State current_state;
+
+bool auth(AsyncWebServerRequest * request) {
+    return request->getParam("password")->value() == "PAexsYUL";
+}
 
 char calculate_checksum(char message[13]) {
     char checksum = 0;
@@ -129,6 +133,10 @@ void setup() {
 }
 
 void handleSetApi(AsyncWebServerRequest * request) {
+    if (!auth(request)) {
+        request->send(401);
+        return;
+    }
     desired_state.power = (request->arg("power") == "on") ? ON : OFF;
     desired_state.temp = atoi(request->arg("temp").c_str());
     auto mode = request->arg("mode");
@@ -181,12 +189,6 @@ void loop() {
         Serial.read(message, 13);
         char destination = message[1];
         char checksum = message[11];
-
-//        if (message[2] == (char)0xA0) {
-//            char buff[1024];
-//            sprintf(buff, "%d, %d, %d, %d, %d, %d, %d, %d", message[3], message[4], message[5], message[6], message[7], message[8], message[9], message[10]);
-//            ws.textAll(buff);
-//        }
 
         if (message[12] != 0x34 || calculate_checksum(message) != checksum) {
             return;

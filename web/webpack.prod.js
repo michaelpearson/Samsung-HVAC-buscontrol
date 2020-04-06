@@ -41,7 +41,8 @@ module.exports = merge(common, {
     mode: 'production',
     plugins: [
         new CleanWebpackPlugin({
-            cleanAfterEveryBuildPatterns: ['*', '!index.html.gz'],
+            cleanOnceBeforeBuildPatterns: [],
+            cleanAfterEveryBuildPatterns: ['*', '!index.html.gz', '!manifest.json', '!icons'],
             protectWebpackAssets: false
         }),
         new InlineJsHtmlPlugin(),

@@ -4,12 +4,14 @@
     <title>AC Control</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
     <style>
         <% include src/assets/css/main.css %>
         <% include src/assets/css/temperature.css %>
         <% include src/assets/css/fan-speed.css %>
         <% include src/assets/css/power.css %>
         <% include src/assets/css/mode.css %>
+        <% include src/assets/css/options.css %>
     </style>
 </head>
 <body>
@@ -43,6 +45,11 @@
             <div class="power-option power-low" data-power="low">Low</div>
             <div class="power-option power-medium" data-power="medium">Medium</div>
             <div class="power-option power-high" data-power="high">High</div>
+        </div>
+    </div>
+    <div class="options">
+        <div class="loader">
+            <% include src/assets/svg/spinner.svg %>
         </div>
     </div>
     <div class="temperature">

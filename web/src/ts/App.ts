@@ -4,7 +4,7 @@ import RadioButton from "./RadioButton";
 import ReconnectingWebSocket from "reconnecting-websocket";
 
 export default class App {
-    private readonly websocket = new ReconnectingWebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws`);
+    private readonly websocket: ReconnectingWebSocket;
     private readonly slider = new Slider(document.querySelector<HTMLCanvasElement>('#dial'), {
         min: 18,
         max: 30,
@@ -18,13 +18,17 @@ export default class App {
     }, this.setTemperature.bind(this));
     private readonly mode = new RadioButton(document.querySelectorAll('.mode-option'), "data-mode", this.setMode.bind(this));
     private readonly power = new RadioButton(document.querySelectorAll('.power-option'), "data-power", this.setPower.bind(this));
+    private readonly loadingElement = document.querySelector<HTMLElement>('.loader');
+    private readonly password: string;
 
     private state: AcState = null;
     private displayState: AcState = null;
     private updateTimer: number = null;
 
-    constructor() {
+    constructor(password: string) {
+        this.websocket = new ReconnectingWebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws?password=${encodeURIComponent(password)}`);
         this.websocket.addEventListener('message', this.handleData.bind(this));
+        this.password = password;
     }
 
     private async setMode(mode: string) {
@@ -57,6 +61,7 @@ export default class App {
             this.displayState = {...this.state};
             this.render();
         }
+        this.setLoading(false);
     }
 
     private render() {
@@ -71,6 +76,9 @@ export default class App {
     }
 
     private async sendUpdate() {
+        if (this.displayState != this.state) {
+            this.setLoading(true);
+        }
         window.clearTimeout(this.updateTimer);
         this.updateTimer = null;
         this.updateTimer = window.setTimeout(() => {
@@ -78,9 +86,14 @@ export default class App {
                 this.displayState = {...this.state};
                 this.render()
             }
+            this.setLoading(false);
         }, 5000);
-        await fetch(`/set?power=${this.displayState.power}&temp=${this.displayState.temp}&mode=${this.displayState.mode}&fan=${this.displayState.fanSpeed}`, {
+        await fetch(`/set?password=${encodeURIComponent(this.password)}&power=${this.displayState.power}&temp=${this.displayState.temp}&mode=${this.displayState.mode}&fan=${this.displayState.fanSpeed}`, {
             method: 'POST'
         });
+    }
+
+    private setLoading(loading: boolean) {
+        this.loadingElement.style.visibility = loading ? "visible" : "hidden";
     }
 }

@@ -4,5 +4,5 @@ CMakeListsPrivate.txt
 cmake-*
 web/node_modules
 *.map
-data/*
+data/*.gz
 .DS_STORE

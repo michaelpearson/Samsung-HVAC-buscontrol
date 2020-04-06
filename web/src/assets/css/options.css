@@ -1,0 +1,19 @@
+.content > .options {
+    text-align: right;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.loader {
+    display: inline-block;
+    width: 50px;
+}
+
+
+.loader > svg {
+    width: 100%;
+    height: auto;
+    fill: #619ef5;
+    stroke: #619ef5;
+    color: #619ef5;
+}
