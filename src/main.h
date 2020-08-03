@@ -3,8 +3,11 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include "AuthenticatedAsyncWebSocket.h"
+#include <ESP8266HTTPClient.h>
 
 #define TX_EN_PIN 14
+
+#define API_KEY "Bearer <Grafana API key>"
 
 typedef enum Power {
     ON = 0xf4,
@@ -38,6 +41,7 @@ void loop();
 
 bool auth(AsyncWebServerRequest * request);
 char calculate_checksum(char message[13]);
-void send_state(AsyncWebSocketClient * client = nullptr);
+void send_state(const char * state, size_t len, AsyncWebSocketClient * client);
+void send_metric(const char * state, size_t len);
 void handleSetApi(AsyncWebServerRequest * request);
 void set_ac(bool on, u8 fan_speed, u8 temp, u8 mode);

@@ -1,3 +1,5 @@
+#define DEBUG_HTTPCLIENT(x) ws.textAll(x)
+
 #include "main.h"
 
 AsyncWebServer server(80);
@@ -48,8 +50,7 @@ void set_ac(State * state) {
     digitalWrite(TX_EN_PIN, LOW);
 }
 
-void send_state(AsyncWebSocketClient * client) {
-    static char json[1024];
+size_t get_state(char * buff, int len) {
     static StaticJsonDocument<1024> doc;
     doc.clear();
 
@@ -92,18 +93,92 @@ void send_state(AsyncWebSocketClient * client) {
             doc["mode"] = "unknown";
             break;
     }
+    return serializeJson(doc, buff, len);
+}
 
-    serializeJson(doc, json, sizeof(json));
+void send_state(const char * state, size_t len, AsyncWebSocketClient * client) {
     if (client == nullptr) {
-        ws.textAll(json);
+        ws.textAll(state, len);
     } else {
-        client->text(json);
+        client->text(state, len);
     }
+}
+
+void send_metric(const char * state, size_t len) {
+    static StaticJsonDocument<1024> doc;
+    static uint8_t output[1024];
+    static char scratch[64];
+    doc.clear();
+    doc["what"] = "AC change";
+    auto tags = doc.createNestedArray("tags");
+    tags.add("ac-change");
+    sprintf(scratch, "temp: %d", current_state.temp);
+    tags.add(scratch);
+
+    char * mode;
+    switch (current_state.mode) {
+        case AUTO:
+            mode = "auto";
+            break;
+        case COOL:
+            mode = "cool";
+            break;
+        case DRY:
+            mode = "dry";
+            break;
+        case FAN:
+            mode = "fan";
+            break;
+        case HEAT:
+            mode = "heat";
+            break;
+        default:
+            mode = "unknown";
+            break;
+    }
+
+    char * fan_speed;
+    switch(current_state.fanSpeed) {
+        case FS_AUTO:
+            fan_speed = "auto";
+            break;
+        case FS_LOW:
+            fan_speed = "low";
+            break;
+        case FS_MEDIUM:
+            fan_speed = "medium";
+            break;
+        case FS_HIGH:
+            fan_speed = "high";
+            break;
+        default:
+            fan_speed = "unknown";
+            break;
+    }
+
+    tags.add(mode);
+    tags.add(fan_speed);
+    tags.add(current_state.power == ON ? "on" : "off");
+
+    doc["data"] = state;
+    size_t output_len = serializeJson(doc, output, 1024);
+
+    HTTPClient httpClient;
+    WiFiClientSecure client;
+    client.setTimeout(5000);
+    client.setInsecure();
+
+    httpClient.begin(client, "https://pm.mpearson.io/api/annotations/graphite");
+    httpClient.addHeader("Authorization", API_KEY);
+    httpClient.addHeader("content-type", "application/json");
+    httpClient.POST(output, output_len);
 }
 
 void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
     if (type == WS_EVT_CONNECT) {
-        send_state(client);
+        char buff[1024];
+        size_t state_len = get_state(buff, sizeof(buff));
+        send_state(buff, state_len, client);
     }
 }
 
@@ -229,8 +304,11 @@ void loop() {
         changed |= old_state.fanSpeed != current_state.fanSpeed;
         changed |= old_state.power != current_state.power;
         changed |= old_state.temp != current_state.temp;
-        if (changed) {
-            send_state();
+        if (changed && millis() > 20000) {
+            static char buff[1024];
+            size_t len = get_state(buff, sizeof(buff));
+            send_state(buff, len, nullptr);
+            send_metric(buff, len);
         }
     }
 }

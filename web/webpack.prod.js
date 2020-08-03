@@ -42,7 +42,7 @@ module.exports = merge(common, {
     plugins: [
         new CleanWebpackPlugin({
             cleanOnceBeforeBuildPatterns: [],
-            cleanAfterEveryBuildPatterns: ['*', '!index.html.gz', '!manifest.json', '!icons'],
+            cleanAfterEveryBuildPatterns: ['*', '!index.html.gz', '!manifest.json', '!icons', '!favicon.ico'],
             protectWebpackAssets: false
         }),
         new InlineJsHtmlPlugin(),
