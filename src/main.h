@@ -41,7 +41,7 @@ void loop();
 
 bool auth(AsyncWebServerRequest * request);
 char calculate_checksum(char message[13]);
-void send_state(const char * state, size_t len, AsyncWebSocketClient * client);
-void send_metric(const char * state, size_t len);
+void send_state(AsyncWebSocketClient * client);
+void send_metric();
 void handleSetApi(AsyncWebServerRequest * request);
-void set_ac(bool on, u8 fan_speed, u8 temp, u8 mode);
+void set_ac(const State * state);
