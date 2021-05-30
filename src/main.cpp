@@ -1,13 +1,27 @@
-#define DEBUG_HTTPCLIENT(x) ws.textAll(x)
-
 #include "main.h"
 
 AsyncWebServer server(80);
 AuthenticatedAsyncWebSocket ws(auth, "/ws");
 
-u8 send_flag = 0;
 State desired_state;
 State current_state;
+unsigned long desired_set_at = 0;
+int set_count = 0;
+
+bool operator==(const State& lhs, const State& rhs) {
+    if (lhs.power == OFF && rhs.power == OFF) {
+        return true;
+    }
+
+    return lhs.fanSpeed == rhs.fanSpeed
+           && lhs.mode == rhs.mode
+           && lhs.power == rhs.power
+           && lhs.temp == rhs.temp;
+}
+
+bool operator!=(const State& lhs, const State& rhs) {
+    return !(lhs == rhs);
+}
 
 bool auth(AsyncWebServerRequest * request) {
     return request->getParam("password")->value() == "PAexsYUL";
@@ -21,7 +35,7 @@ char calculate_checksum(char message[13]) {
     return checksum;
 }
 
-void set_ac(State * state) {
+void set_ac(const State * state) {
     static char message[14];
 
     message[0] = 0x32; // Message start
@@ -43,6 +57,8 @@ void set_ac(State * state) {
     message[12] = calculate_checksum(message + 1); // checksum
     message[13] = 0x34; // Message end
 
+    set_count++;
+
     delay(10);
     digitalWrite(TX_EN_PIN, HIGH);
     Serial.write(message, 14);
@@ -50,13 +66,13 @@ void set_ac(State * state) {
     digitalWrite(TX_EN_PIN, LOW);
 }
 
-size_t get_state(char * buff, int len) {
+void send_state(AsyncWebSocketClient * client) {
     static StaticJsonDocument<1024> doc;
     doc.clear();
 
-    doc["power"] = current_state.power == ON ? "on" : "off";
-    doc["temp"] = (JsonInteger)current_state.temp;
-    switch (current_state.fanSpeed) {
+    doc["power"] = desired_state.power == ON ? "on" : "off";
+    doc["temp"] = (JsonInteger)desired_state.temp;
+    switch (desired_state.fanSpeed) {
         case FS_AUTO:
             doc["fanSpeed"] = "auto";
             break;
@@ -73,7 +89,7 @@ size_t get_state(char * buff, int len) {
             doc["fanSpeed"] = "unknown";
             break;
     }
-    switch(current_state.mode) {
+    switch(desired_state.mode) {
         case AUTO:
             doc["mode"] = "auto";
             break;
@@ -93,18 +109,20 @@ size_t get_state(char * buff, int len) {
             doc["mode"] = "unknown";
             break;
     }
-    return serializeJson(doc, buff, len);
-}
+    doc["applying"] = current_state != desired_state;
+    doc["set_count"] = set_count;
 
-void send_state(const char * state, size_t len, AsyncWebSocketClient * client) {
+    static char buff[1024];
+    auto state_len = serializeJson(doc, buff, sizeof(buff));
+
     if (client == nullptr) {
-        ws.textAll(state, len);
+        ws.textAll(buff, state_len);
     } else {
-        client->text(state, len);
+        client->text(buff, state_len);
     }
 }
 
-void send_metric(const char * state, size_t len) {
+void send_metric() {
     static StaticJsonDocument<1024> doc;
     static uint8_t output[1024];
     static char scratch[64];
@@ -160,7 +178,6 @@ void send_metric(const char * state, size_t len) {
     tags.add(fan_speed);
     tags.add(current_state.power == ON ? "on" : "off");
 
-    doc["data"] = state;
     size_t output_len = serializeJson(doc, output, 1024);
 
     HTTPClient httpClient;
@@ -169,6 +186,7 @@ void send_metric(const char * state, size_t len) {
     client.setInsecure();
 
     httpClient.begin(client, "https://pm.mpearson.io/api/annotations/graphite");
+    //httpClient.begin(client, "https://webhook.site/01630749-4691-4306-b0a1-629e871c6b5a");
     httpClient.addHeader("Authorization", API_KEY);
     httpClient.addHeader("content-type", "application/json");
     httpClient.POST(output, output_len);
@@ -176,9 +194,7 @@ void send_metric(const char * state, size_t len) {
 
 void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
     if (type == WS_EVT_CONNECT) {
-        char buff[1024];
-        size_t state_len = get_state(buff, sizeof(buff));
-        send_state(buff, state_len, client);
+        send_state(client);
     }
 }
 
@@ -236,8 +252,8 @@ void handleSetApi(AsyncWebServerRequest * request) {
     } else {
         desired_state.fanSpeed = FS_AUTO;
     }
-    send_flag = true;
-    request->send(200, "application/json", "{}");
+    desired_set_at = millis();
+    request->send(201, "application/json");
 }
 
 void loop() {
@@ -268,10 +284,6 @@ void loop() {
         if (message[12] != 0x34 || calculate_checksum(message) != checksum) {
             return;
         }
-        if (send_flag && destination == (char) 0xAD) {
-            set_ac(&desired_state);
-            send_flag = false;
-        }
 
         State old_state = current_state;
         if (message[2] == (char)0x52 && message[1] == (char)0x84) {
@@ -299,16 +311,28 @@ void loop() {
             }
         }
 
-        int changed = 0;
-        changed |= old_state.mode != current_state.mode;
-        changed |= old_state.fanSpeed != current_state.fanSpeed;
-        changed |= old_state.power != current_state.power;
-        changed |= old_state.temp != current_state.temp;
-        if (changed && millis() > 20000) {
-            static char buff[1024];
-            size_t len = get_state(buff, sizeof(buff));
-            send_state(buff, len, nullptr);
-            send_metric(buff, len);
+        // If the desired state has been set recently, and the protocol is ready for a command.
+        if (destination == (char) 0xAD
+            && desired_state != current_state
+            && (millis() - desired_set_at) < 10000) {
+            set_ac(&desired_state);
+        }
+
+        // Update the desired state from the bus if we haven't been commanded to set the AC for a while.
+        // If desired set at == 0 then always copy the desired state
+        if (desired_state != current_state && (desired_set_at == 0 || ((millis() - desired_set_at) >= 10000))) {
+            desired_state = current_state;
+        }
+
+        // Send metrics to Grafana. Also, prevent a state change notification on startup.
+        if (millis() > 10000 && old_state != current_state) {
+            send_metric();
+        }
+
+        static long last_sent = 0;
+        if ((millis() - last_sent) > 1000) {
+            last_sent = millis();
+            send_state(nullptr);
         }
     }
 }

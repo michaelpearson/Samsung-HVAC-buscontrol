@@ -45,6 +45,7 @@ export default class Slider {
         }
         let percentage = adjustedAngle / this.setting.angleRange;
         let value = percentage * (this.setting.max - this.setting.min) + this.setting.min;
+        value = Math.round(value / this.setting.step) * this.setting.step;
 
         let radius = Math.sqrt(Math.pow(relativeX, 2) + Math.pow(relativeY, 2));
         let innerRadius = width / 2 - this.setting.lineWidth * this.setting.touchMarginFactor + this.setting.lineWidth / 2;

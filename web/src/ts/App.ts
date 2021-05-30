@@ -22,8 +22,7 @@ export default class App {
     private readonly password: string;
 
     private state: AcState = null;
-    private displayState: AcState = null;
-    private updateTimer: number = null;
+    private preventUpdate = false;
 
     constructor(password: string) {
         this.websocket = new ReconnectingWebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws?password=${encodeURIComponent(password)}`);
@@ -32,68 +31,55 @@ export default class App {
     }
 
     private async setMode(mode: string) {
-        this.displayState.mode = mode as any;
-        if (this.displayState.power == "off") {
-            this.displayState.power = "on";
-            this.render();
-        }
+        this.state.mode = mode as any;
         await this.sendUpdate();
     }
 
     private async setPower(fanSpeed: string) {
         if (fanSpeed === "off") {
-            this.displayState.power = "off";
+            this.state.power = "off";
         } else {
-            this.displayState.power = "on";
-            this.displayState.fanSpeed = fanSpeed as any;
+            this.state.power = "on";
+            this.state.fanSpeed = fanSpeed as any;
         }
         await this.sendUpdate();
     }
 
     private async setTemperature(temperature: number) {
-        this.displayState.temp = temperature;
+        this.state.temp = temperature;
         await this.sendUpdate();
     }
 
     private handleData(event: MessageEvent) {
-        this.state = JSON.parse(event.data.toString());
-        if (this.displayState == null || !this.updateTimer) {
-            this.displayState = {...this.state};
-            this.render();
+        if (this.preventUpdate) {
+            return;
         }
-        this.setLoading(false);
+        this.state = JSON.parse(event.data.toString());
+        this.render();
     }
 
     private render() {
-        this.slider.setValue(this.displayState.temp);
-        this.mode.setValue(this.displayState.mode);
-        if (this.displayState.power === "off") {
+        this.slider.setValue(this.state.temp);
+        this.mode.setValue(this.state.mode);
+        if (this.state.power === "off") {
             this.power.setValue("off");
         } else {
-            this.power.setValue(this.displayState.fanSpeed);
+            this.power.setValue(this.state.fanSpeed);
         }
         this.slider.render();
+        this.loadingElement.style.visibility = this.state.applying ? "visible" : "hidden";
     }
 
     private async sendUpdate() {
-        if (this.displayState != this.state) {
-            this.setLoading(true);
+        try {
+            this.preventUpdate = true;
+            await fetch(`/set?password=${encodeURIComponent(this.password)}&power=${this.state.power}&temp=${this.state.temp}&mode=${this.state.mode}&fan=${this.state.fanSpeed}`, {
+                method: 'POST'
+            });
+        } catch (e) {
+            console.warn("Send failed");
+        } finally {
+            setTimeout(() => this.preventUpdate = false, 500);
         }
-        window.clearTimeout(this.updateTimer);
-        this.updateTimer = null;
-        this.updateTimer = window.setTimeout(() => {
-            if (this.displayState != this.state) {
-                this.displayState = {...this.state};
-                this.render()
-            }
-            this.setLoading(false);
-        }, 5000);
-        await fetch(`/set?password=${encodeURIComponent(this.password)}&power=${this.displayState.power}&temp=${this.displayState.temp}&mode=${this.displayState.mode}&fan=${this.displayState.fanSpeed}`, {
-            method: 'POST'
-        });
-    }
-
-    private setLoading(loading: boolean) {
-        this.loadingElement.style.visibility = loading ? "visible" : "hidden";
     }
 }
